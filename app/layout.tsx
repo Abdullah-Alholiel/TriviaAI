@@ -1,5 +1,7 @@
 import './globals.css'
 import { Inter, Orbitron, Exo_2 } from 'next/font/google'
+import { LoadingProvider } from '@/components/ui/LoadingContext'
+import { ThemeProvider } from '@/components/ui/ThemeContext'
 
 const inter = Inter({ subsets: ['latin'] })
 const orbitron = Orbitron({ 
@@ -23,9 +25,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${orbitron.variable} ${exo2.variable}`}>
-      <body className={`${inter.className} bg-gradient-to-b from-teal-600 via-blue-800 to-gray-900 min-h-screen text-white antialiased`}>
-        {children}
+    <html lang="en" className={`${orbitron.variable} ${exo2.variable}`} suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen antialiased transition-colors duration-300`}>
+        <ThemeProvider>
+          <LoadingProvider>
+            {children}
+          </LoadingProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

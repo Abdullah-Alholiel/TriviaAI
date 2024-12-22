@@ -53,6 +53,15 @@ module.exports = {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      keyframes: {
+        'grid-move': {
+          '0%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(-50%)' }
+        },
+      },
+      animation: {
+        'grid-move': 'grid-move 20s linear infinite',
+      },
     },
   },
   plugins: [],
