@@ -1,142 +1,233 @@
 'use client'
 
-import { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { QuestionCard } from "../QuestionCard";
-import { ScoreDisplay } from "../ScoreDisplay";
-import { GameOver } from "../GameOver";
-import { Trophy, Brain, ArrowLeftCircle } from "lucide-react"; // Changed imports
-import { Question } from "../../types/questions";
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { QuestionCard } from '../QuestionCard'
+import { ScoreDisplay } from '../ScoreDisplay'
+import { GameConfigModal } from '@/components/game-config-modal'
+import { TriviaGame as TriviaGameType, GameConfig, TriviaQuestion } from '@/lib/types/trivia'
+import { useLoading } from '@/components/ui/LoadingContext'
+import { GameOver } from '../GameOver'
+import { Timer } from '../timer'
+import { GameNotification } from '../GameNotification'
+import Background from '@/components/background'
+import { Brain } from 'lucide-react'
 
-const SAMPLE_QUESTIONS: Question[] = [
+// Static questions bank for classic mode
+const STATIC_QUESTIONS: TriviaQuestion[] = [
   {
-    id: "1",
-    type: "multiple-choice",
-    question: "Which country won the FIFA World Cup 2022?",
+    id: '1',
+    type: 'multiple-choice',
+    question: 'Which country won the FIFA World Cup 2022?',
     options: [
-      { id: "a", text: "France" },
-      { id: "b", text: "Argentina" },
-      { id: "c", text: "Brazil" },
-      { id: "d", text: "Germany" },
+      { id: 'a', text: 'France' },
+      { id: 'b', text: 'Argentina' },
+      { id: 'c', text: 'Brazil' },
+      { id: 'd', text: 'Germany' },
     ],
-    correctAnswer: "b",
-    explanation: "Argentina won their third World Cup title in 2022, led by Lionel Messi.",
+    correctAnswer: 'b',
+    explanation: 'Argentina won their third World Cup title in 2022, led by Lionel Messi.',
   },
   {
-    id: "2",
-    type: "true-false",
-    question: "The FIFA World Cup trophy is made of solid gold.",
+    id: '2',
+    type: 'true-false',
+    question: 'The FIFA World Cup trophy is made of solid gold.',
     correctAnswer: false,
-    explanation: "The FIFA World Cup trophy is actually made of solid silver with gold plating.",
+    explanation: 'The FIFA World Cup trophy is actually made of solid silver with gold plating.',
   },
   {
-    id: "3",
-    type: "text-input",
-    question: "Which player is known as 'CR7'?",
-    correctAnswer: "Cristiano Ronaldo",
-    acceptableAnswers: ["ronaldo", "cr7"],
-    explanation: "Cristiano Ronaldo wears the number 7 and is commonly known as CR7.",
-  }
-];
+    id: '3',
+    type: 'text-input',
+    question: 'Which player is known as "CR7"?',
+    correctAnswer: 'Cristiano Ronaldo',
+    acceptableAnswers: ['ronaldo', 'cr7'],
+    explanation: 'Cristiano Ronaldo wears the number 7 and is commonly known as CR7.',
+  },
+  // Add more static questions here
+]
 
 interface TriviaGameProps {
   onExit: () => void
+  mode?: 'classic' | 'ai'
 }
 
-const TriviaGame = ({ onExit }: TriviaGameProps) => {
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [score, setScore] = useState(0);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [gameOver, setGameOver] = useState(false);
+export default function TriviaGame({ onExit, mode = 'classic' }: TriviaGameProps) {
+  const [gameState, setGameState] = useState<'config' | 'playing' | 'finished'>('config')
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [score, setScore] = useState(0)
+  const [game, setGame] = useState<TriviaGameType | null>(null)
+  const [showNotification, setShowNotification] = useState(false)
+  const [notificationType, setNotificationType] = useState<'timeWarning' | 'timeUp' | 'correct' | 'incorrect'>('timeUp')
+  const { setIsLoading } = useLoading()
+
+  const questions = game?.questions || STATIC_QUESTIONS
+
+  const handleGameStart = async (config: GameConfig) => {
+    setIsLoading(true)
+    try {
+      if (mode === 'ai') {
+        const response = await fetch('/api/trivia', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(config),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to generate game')
+        }
+
+        const gameData = await response.json()
+        setGame(gameData)
+      }
+      setGameState('playing')
+    } catch (error) {
+      console.error('Error starting game:', error)
+      // Handle error (show toast, etc.)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleAnswer = (isCorrect: boolean) => {
-    console.log("Answer handled:", isCorrect, "Current index:", currentQuestionIndex);
     if (isCorrect) {
-      setScore((prev) => prev + 1);
+      setScore(score + 1)
+      setNotificationType('correct')
+    } else {
+      setNotificationType('incorrect')
     }
-    
+    setShowNotification(true)
+
     setTimeout(() => {
-      if (currentQuestionIndex < SAMPLE_QUESTIONS.length - 1) {
-        setCurrentQuestionIndex((prev) => prev + 1);
+      setShowNotification(false)
+      if (currentQuestionIndex + 1 >= questions.length) {
+        setGameState('finished')
       } else {
-        setGameOver(true);
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
       }
-    }, 2000);
-  };
+    }, 1500)
+  }
 
-  const startGame = () => {
-    console.log("Starting new game");
-    setGameStarted(true);
-    setGameOver(false);
-    setScore(0);
-    setCurrentQuestionIndex(0);
-  };
+  const handleTimeUp = () => {
+    setNotificationType('timeUp')
+    setShowNotification(true)
+    setTimeout(() => {
+      setShowNotification(false)
+      if (currentQuestionIndex + 1 >= questions.length) {
+        setGameState('finished')
+      } else {
+        setCurrentQuestionIndex(currentQuestionIndex + 1)
+      }
+    }, 1500)
+  }
 
-  const goToMainMenu = () => {
-    setGameStarted(false);
-    setGameOver(false);
-  };
+  const renderContent = () => {
+    if (gameState === 'config' && mode === 'ai') {
+      return <GameConfigModal onStart={handleGameStart} onCancel={onExit} />
+    }
 
-  const getCurrentQuestion = () => {
-    return gameStarted && !gameOver ? SAMPLE_QUESTIONS[currentQuestionIndex] : undefined;
-  };
+    if (gameState === 'config' && mode === 'classic') {
+      handleGameStart({ topic: 'Classic', difficulty: 'medium', numQuestions: STATIC_QUESTIONS.length })
+      return null
+    }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header with improved exit button */}
-        <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm rounded-lg p-4 shadow-md">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-            Classic Trivia
-          </h1>
-          <Button
-            variant="outline"
-            onClick={onExit}
-            className="flex items-center gap-2 text-gray-900 border-2 border-gray-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all duration-300 font-semibold px-6 py-2"
-            
-          >
-            <ArrowLeftCircle className="w-5 h-5" />
-            Exit Game
-          </Button>
+    if (gameState === 'finished') {
+      return (
+        <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+          <GameOver
+            score={score}
+            totalQuestions={questions.length}
+            onRestart={() => {
+              setScore(0)
+              setCurrentQuestionIndex(0)
+              setGameState('config')
+            }}
+            onMainMenu={onExit}
+          />
         </div>
+      )
+    }
 
-        {/* Main game content */}
-        <div className="space-y-8">
-          {!gameStarted ? (
-            <div className="bg-white/50 backdrop-blur-sm rounded-lg p-8 shadow-xl animate-fade-in border-2 border-purple-200">
-              <h2 className="text-3xl font-semibold mb-6 text-center text-purple-900">Ready to Play?</h2>
-              <Button 
-                onClick={startGame}
-                className="w-full p-6 text-lg bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white transition-all duration-300"
-              >
-                Start Game
-              </Button>
+    const currentQuestion = questions[currentQuestionIndex]
+
+    return (
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="bg-indigo-100 dark:bg-indigo-900 p-3 rounded-xl">
+                <Brain className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {mode === 'classic' ? 'Classic Trivia' : 'AI Trivia'}
+                </h1>
+                <p className="text-gray-600 dark:text-gray-300">
+                  Question {currentQuestionIndex + 1} of {questions.length}
+                </p>
+              </div>
             </div>
-          ) : gameOver ? (
-            <GameOver
-              score={score}
-              totalQuestions={SAMPLE_QUESTIONS.length}
-              onRestart={startGame}
-              onMainMenu={onExit}
-            />
-          ) : (
-            <div className="space-y-8 animate-fade-in">
+            <div className="flex items-center gap-6">
               <ScoreDisplay
                 score={score}
-                totalQuestions={SAMPLE_QUESTIONS.length}
+                totalQuestions={questions.length}
+                className="w-48"
               />
-              <QuestionCard
-                question={getCurrentQuestion()}
-                onAnswer={handleAnswer}
-                isLastQuestion={currentQuestionIndex === SAMPLE_QUESTIONS.length - 1}
+              <Timer
+                duration={30}
+                onTimeUp={handleTimeUp}
+                isActive={gameState === 'playing'}
               />
+              <button
+                onClick={onExit}
+                className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              >
+                Exit Game
+              </button>
             </div>
-          )}
+          </div>
+
+          {/* Question Card */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentQuestionIndex}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              <QuestionCard
+                question={currentQuestion}
+                onAnswer={handleAnswer}
+              />
+            </motion.div>
+          </AnimatePresence>
+
+          {/* Notification */}
+          <GameNotification
+            type={notificationType}
+            message={
+              notificationType === 'timeUp'
+                ? "Time's up! Moving to next question..."
+                : notificationType === 'correct'
+                ? 'Correct! Well done!'
+                : notificationType === 'incorrect'
+                ? 'Incorrect! Keep trying!'
+                : 'Time is running out!'
+            }
+            isVisible={showNotification}
+          />
         </div>
       </div>
-    </div>
-  );
-};
+    )
+  }
 
-export default TriviaGame;
+  return (
+    <div className="min-h-screen relative">
+      <Background />
+      {renderContent()}
+    </div>
+  )
+}

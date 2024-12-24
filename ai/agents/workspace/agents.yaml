@@ -4,8 +4,8 @@ resources:
       name: trivia_master
       llm:
         type: openrouter
-        model: "openai/gpt-4"
-        api_key: "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"
+        model: "google/gemini-2.0-flash-exp:free"
+        api_key: os.getenv("OPENROUTER_API_KEY")
         api_base: "https://openrouter.ai/api/v1"
         temperature: 0.7
         max_tokens: 1000
@@ -40,9 +40,10 @@ resources:
     question_generator:
       name: question_generator
       llm: 
-        type: ollama
-        model: qwen.2.5-coder:latest  # or llama2, codellama, etc
-        api_base: "http://localhost:11434"
+        type: openrouter
+        model: "google/gemini-2.0-flash-exp:free"
+        api_key: os.getenv("OPENROUTER_API_KEY")
+        api_base: "https://openrouter.ai/api/v1"
         temperature: 0.7
         max_tokens: 1000
       system_message: |
@@ -86,10 +87,10 @@ resources:
 
     fact_checker:
       name: fact_checker
-      llm: 
-        type: ollama
-        model: qwen2.5-coder:latest  # or llama2, codellama, etc
-        api_base: "http://localhost:11434"
+      type: openrouter
+        model: "google/gemini-2.0-flash-exp:free"
+        api_key: os.getenv("OPENROUTER_API_KEY")
+        api_base: "https://openrouter.ai/api/v1"
         temperature: 0.7
         max_tokens: 1000
       system_message: |

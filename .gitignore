@@ -26,9 +26,10 @@
 /.next/workbox-*.js.map
 
 # ai backend venv and env
+/ai/.env
 /ai/env
 /ai/.venv
-
+/ai/.env.local
 # production
 /build
 
@@ -43,6 +44,8 @@ yarn-error.log*
 
 # local env files
 .env*.local
+
+.gitignore
 
 # vercel
 .vercel
