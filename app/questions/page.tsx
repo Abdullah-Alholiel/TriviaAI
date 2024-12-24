@@ -1,31 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
-import LadderSnake from '../components/ladder-snake'
+import LadderSnake from '../../components/ladder-snake'
 
-type Question = {
-  id: number
-  text: string
-  type: 'multiple-choice' | 'yes-no' | 'ladder-snake'
-  options?: string[]
-  correctAnswer: string
-}
-
-export default function QuestionsPage() {
+function QuestionsContent() {
+  const searchParams = useSearchParams()
+  const topic = searchParams.get('topic')
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
   const [score, setScore] = useState(0)
   const [showFeedback, setShowFeedback] = useState(false)
-  const searchParams = useSearchParams()
-  const topic = searchParams.get('topic')
+
+  type Question = {
+    id: number
+    text: string
+    type: 'multiple-choice' | 'yes-no' | 'ladder-snake'
+    options?: string[]
+    correctAnswer: string
+  }
 
   useEffect(() => {
-    // Simulating API call to fetch questions
     const fetchQuestions = async () => {
-      // In a real application, you would fetch questions from your backend
       const dummyQuestions: Question[] = [
         {
           id: 1,
@@ -47,7 +45,6 @@ export default function QuestionsPage() {
           options: ['Mars', 'Venus', 'Jupiter', 'Saturn'],
           correctAnswer: 'Mars'
         },
-        // Add more dummy questions here
       ]
       setQuestions(dummyQuestions)
     }
@@ -71,20 +68,20 @@ export default function QuestionsPage() {
   }
 
   if (questions.length === 0) {
-    return <div className="text-center text-white text-2xl mt-10">Loading questions...</div>
+    return <div className="text-center text-2xl mt-10">Loading questions...</div>
   }
 
   if (currentQuestionIndex >= questions.length) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
-          className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full text-center"
+          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full text-center"
         >
-          <h2 className="text-3xl font-bold mb-4 text-indigo-600">Game Over!</h2>
-          <p className="text-xl mb-4">Your final score: {score} / {questions.length}</p>
+          <h2 className="text-3xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Game Over!</h2>
+          <p className="text-xl mb-4 text-gray-900 dark:text-gray-100">Your final score: {score} / {questions.length}</p>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -108,9 +105,9 @@ export default function QuestionsPage() {
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: -50 }}
         transition={{ duration: 0.5 }}
-        className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full"
+        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-8 max-w-md w-full"
       >
-        <h2 className="text-2xl font-bold mb-4 text-indigo-600">Question {currentQuestionIndex + 1}</h2>
+        <h2 className="text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400">Question {currentQuestionIndex + 1}</h2>
         {currentQuestion.type === 'ladder-snake' ? (
           <LadderSnake
             question={currentQuestion}
@@ -120,7 +117,7 @@ export default function QuestionsPage() {
           />
         ) : (
           <>
-            <p className="text-lg mb-6">{currentQuestion.text}</p>
+            <p className="text-lg mb-6 text-gray-900 dark:text-gray-100">{currentQuestion.text}</p>
             <div className="space-y-4">
               <AnimatePresence>
                 {currentQuestion.type === 'multiple-choice' && currentQuestion.options?.map((option, index) => (
@@ -136,7 +133,7 @@ export default function QuestionsPage() {
                         ? option === currentQuestion.correctAnswer
                           ? 'bg-green-500 text-white'
                           : 'bg-red-500 text-white'
-                        : 'bg-gray-200 hover:bg-indigo-100'
+                        : 'bg-gray-200 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-gray-600'
                     }`}
                     disabled={showFeedback}
                   >
@@ -155,7 +152,7 @@ export default function QuestionsPage() {
                           ? 'Yes' === currentQuestion.correctAnswer
                             ? 'bg-green-500 text-white'
                             : 'bg-red-500 text-white'
-                          : 'bg-gray-200 hover:bg-indigo-100'
+                          : 'bg-gray-200 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-gray-600'
                       }`}
                       disabled={showFeedback}
                     >
@@ -171,7 +168,7 @@ export default function QuestionsPage() {
                           ? 'No' === currentQuestion.correctAnswer
                             ? 'bg-green-500 text-white'
                             : 'bg-red-500 text-white'
-                          : 'bg-gray-200 hover:bg-indigo-100'
+                          : 'bg-gray-200 dark:bg-gray-700 hover:bg-indigo-100 dark:hover:bg-gray-600'
                       }`}
                       disabled={showFeedback}
                     >
@@ -188,11 +185,19 @@ export default function QuestionsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.5 }}
-        className="mt-8 text-white text-xl font-bold"
+        className="mt-8 text-2xl font-bold text-white"
       >
         Score: {score} / {currentQuestionIndex + 1}
       </motion.div>
     </div>
+  )
+}
+
+export default function QuestionsPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-2xl mt-10">Loading...</div>}>
+      <QuestionsContent />
+    </Suspense>
   )
 }
 

@@ -13,6 +13,22 @@
 /.next/
 /out/
 
+# pwa
+/.next/cache/
+/.next/service-worker.js
+/.next/service-worker.js.map
+/.next/workbox-*.js
+/.next/workbox-*.js.map
+/.next/workbox-*.js.map
+/.next/workbox-*.js
+/.next/workbox-*.js.map
+/.next/workbox-*.js
+/.next/workbox-*.js.map
+
+# ai backend venv and env
+/ai/env
+/ai/.venv
+
 # production
 /build
 

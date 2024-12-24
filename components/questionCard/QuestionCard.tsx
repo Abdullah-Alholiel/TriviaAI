@@ -10,7 +10,7 @@ import { Timer } from "./timer";
 import { GameNotification } from "./GameNotification";
 
 interface QuestionCardProps {
-  question?: Question;
+  question: Question | undefined;
   onAnswer: (isCorrect: boolean) => void;
   isLastQuestion?: boolean;
 }

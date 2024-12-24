@@ -2,19 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Trophy, Brain, Gamepad, Upload, Dice1Icon as Dice, ArrowRight } from 'lucide-react'
-//import AnimatedBackground from '../components/animated-background'
-import { QuestionCard } from '../components/questionCard/QuestionCard'
+import { Brain, Dice1Icon as Dice } from 'lucide-react'
 import QuestionCardex from '../components/question-card'
-import GameModeButton from '../components/game-mode-button'
 import RetroGrid from '../components/ui/retro-grid'
 import ShinyButton from '../components/ui/shiny-button'
 import CustomTriviaCard from '../components/custom-trivia-card'
-import { Question } from '../components/types/questions'
 import TriviaGame from '../components/questionCard/pages/Index'
 import SnakesAndLadders from '../components/SnakesAndLadders'
-import { Card } from "@/components/ui/card";
-import { Button } from '@/components/ui/button'
 import { useLoading } from '@/components/ui/LoadingContext'
 import { useTheme } from '@/components/ui/ThemeContext'
 import Switch from '@/components/ui/LightandDark';
@@ -23,7 +17,6 @@ import { ThemeProvider } from '@/components/ui/ThemeContext'
 export default function Home() {
   const [topic, setTopic] = useState('')
   const [selectedMode, setSelectedMode] = useState<string | null>(null)
-  const [gameStarted, setGameStarted] = useState(false)
   const [gameMode, setGameMode] = useState<'classic' | 'snakes' | null>(null);
   const { setIsLoading } = useLoading();
   const { isDarkMode, toggleTheme } = useTheme();
@@ -56,7 +49,6 @@ export default function Home() {
           // Load game resources
           await new Promise(resolve => setTimeout(resolve, 1500));
           setGameMode(mode);
-          setGameStarted(true);
           setSelectedMode(null); // Close the modal
         }
       } finally {
@@ -71,7 +63,6 @@ export default function Home() {
       // Cleanup and transition animation
       await new Promise(resolve => setTimeout(resolve, 800));
       setGameMode(null);
-      setGameStarted(false);
       setSelectedMode(null);
     } finally {
       setIsLoading(false);
@@ -91,7 +82,6 @@ export default function Home() {
             <div className="fixed inset-0 z-0">
               <div className="absolute inset-0 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950 transition-colors duration-300" />
               <RetroGrid className="absolute inset-0" />
-              {/*<AnimatedBackground />*/}
             </div>
             
             {/* Main content */}

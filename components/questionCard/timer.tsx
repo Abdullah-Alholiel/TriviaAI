@@ -1,76 +1,79 @@
-//src/components/Timer.tsx
-import { useEffect, useState, useCallback } from "react";
-import { Circle } from "lucide-react";
+'use client'
+
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 
 interface TimerProps {
-  duration: number;
-  onTimeUp: () => void;
-  isActive: boolean;
+  duration: number
+  onTimeUp: () => void
+  isActive?: boolean
 }
 
-export const Timer = ({ duration, onTimeUp, isActive }: TimerProps) => {
-  const [timeLeft, setTimeLeft] = useState(duration);
-  const circumference = 2 * Math.PI * 24; // radius = 24
-  const strokeDashoffset = ((duration - timeLeft) / duration) * circumference;
-
-  const handleTimeUp = useCallback(() => {
-    onTimeUp();
-  }, [onTimeUp]);
+export function Timer({ duration, onTimeUp, isActive = true }: TimerProps) {
+  const [timeLeft, setTimeLeft] = useState(duration)
 
   useEffect(() => {
-    setTimeLeft(duration);
-  }, [duration]);
-
-  useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) return
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          handleTimeUp();
-          return 0;
+          clearInterval(timer)
+          onTimeUp()
+          return 0
         }
-        return prev - 1;
-      });
-    }, 1000);
+        return prev - 1
+      })
+    }, 1000)
 
-    return () => clearInterval(timer);
-  }, [isActive, handleTimeUp]);
+    return () => clearInterval(timer)
+  }, [duration, onTimeUp, isActive])
+
+  useEffect(() => {
+    setTimeLeft(duration)
+  }, [duration])
+
+  const progress = (timeLeft / duration) * 100
 
   return (
-    <div className="relative w-16 h-16 transition-all duration-300">
-      <svg className="transform -rotate-90 w-16 h-16">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="relative h-12 w-12"
+    >
+      <svg className="transform -rotate-90 h-12 w-12">
         <circle
-          cx="32"
-          cy="32"
-          r="24"
+          cx="24"
+          cy="24"
+          r="20"
           stroke="currentColor"
           strokeWidth="4"
           fill="none"
-          className="text-purple-100"
+          className="text-gray-200 dark:text-gray-700"
         />
         <circle
-          cx="32"
-          cy="32"
-          r="24"
+          cx="24"
+          cy="24"
+          r="20"
           stroke="currentColor"
           strokeWidth="4"
           fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className={`text-purple-500 transition-all duration-1000 ease-linear ${
-            timeLeft <= 5 ? "text-red-500 animate-pulse" : ""
+          strokeDasharray={125.66}
+          strokeDashoffset={125.66 - (progress / 100) * 125.66}
+          className={`transition-all duration-1000 ${
+            timeLeft > duration * 0.5
+              ? 'text-green-500'
+              : timeLeft > duration * 0.25
+              ? 'text-yellow-500'
+              : 'text-red-500'
           }`}
         />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className={`text-lg font-bold ${
-          timeLeft <= 5 ? "text-red-600 animate-bounce" : "text-purple-700"
-        }`}>
+        <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
           {timeLeft}s
         </span>
       </div>
-    </div>
-  );
-};
+    </motion.div>
+  )
+}

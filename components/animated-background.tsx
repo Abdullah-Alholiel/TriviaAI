@@ -1,122 +1,93 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Brain, Trophy, Gamepad, Star, Book, Music, Film } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { motion } from 'framer-motion'
 
-const iconComponents = [Brain, Trophy, Gamepad, Star, Book, Music, Film]
-
-type FloatingIconProps = {
-  icon: typeof iconComponents[number]
-  size: number
-  duration: number
-  delay: number
-  initialX: number
-  initialY: number
-}
-
-const FloatingIcon: React.FC<FloatingIconProps> = ({ icon: Icon, size, duration, delay, initialX, initialY }) => {
-  const [isVisible, setIsVisible] = useState(true)
-  const iconRef = useRef(null)
+const AnimatedBackground = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(false), duration)
-    return () => clearTimeout(timer)
-  }, [duration])
+    const canvas = canvasRef.current
+    if (!canvas) return
 
-  return (
-    <AnimatePresence>
-      {isVisible && (
-        <motion.div
-          ref={iconRef}
-          initial={{ opacity: 0, x: initialX, y: initialY }}
-          animate={{ opacity: 0.2, y: '-100%' }}  // Reduced opacity here
-          exit={{ opacity: 0 }}
-          transition={{ duration: duration / 1000, delay: delay / 1000, ease: 'linear' }}
-          drag
-          dragConstraints={{ top: 0, left: 0, right: 0, bottom: 0 }}
-          style={{
-            position: 'absolute',
-            width: size,
-            height: size,
-            zIndex: -1, // Ensure icons are behind other content
-          }}
-        >
-          <Icon size={size} />
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
-}
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
 
-export default function AnimatedBackground() {
-  const [floatingIcons, setFloatingIcons] = useState<React.ReactNode[]>([])
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
 
-  useEffect(() => {
-    const createIcon = () => {
-      const IconComponent = iconComponents[Math.floor(Math.random() * iconComponents.length)]
-      const size = Math.random() * 24 + 16
-      const duration = Math.random() * 5000 + 8000
-      const delay = Math.random() * 2000
-      const initialX = Math.random() * 100 + '%'
-      const initialY = '100%' // Start from the bottom of the screen
+    const particles: Array<{
+      x: number
+      y: number
+      radius: number
+      dx: number
+      dy: number
+      color: string
+    }> = []
 
-      setFloatingIcons(prevIcons => [
-        ...prevIcons,
-        <FloatingIcon
-          key={Date.now()}
-          icon={IconComponent}
-          size={size}
-          duration={duration}
-          delay={delay}
-          initialX={Math.floor(Math.random() * window.innerWidth)}
-          initialY={Math.floor(Math.random() * window.innerHeight)}
-        />
-      ])
+    const createParticle = () => {
+      const radius = Math.random() * 2 + 1
+      const x = Math.random() * canvas.width
+      const y = Math.random() * canvas.height
+      const dx = (Math.random() - 0.5) * 2
+      const dy = (Math.random() - 0.5) * 2
+      const color = `rgba(${Math.random() * 255}, ${Math.random() * 255}, ${
+        Math.random() * 255
+      }, 0.5)`
+
+      particles.push({ x, y, radius, dx, dy, color })
     }
 
-    // Create a grid pattern of icons
-    const createGridPattern = () => {
-      const gridSpacing = 100; // Adjust spacing as needed
-      const numIconsPerRow = Math.ceil(window.innerWidth / gridSpacing);
-      const numIconsPerCol = Math.ceil(window.innerHeight / gridSpacing);
+    for (let i = 0; i < 50; i++) {
+      createParticle()
+    }
 
-      for (let row = 0; row < numIconsPerRow; row++) {
-        for (let col = 0; col < numIconsPerCol; col++) {
-          const IconComponent = iconComponents[Math.floor(Math.random() * iconComponents.length)]
-          const size = Math.random() * 24 + 16
-          const duration = Math.random() * 5000 + 8000
-          const delay = Math.random() * 2000
-          const initialX = `${row * gridSpacing + Math.random() * gridSpacing}px`
-          const initialY = `${col * gridSpacing + Math.random() * gridSpacing}px`
+    const animate = () => {
+      requestAnimationFrame(animate)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-          setFloatingIcons(prevIcons => [
-            ...prevIcons,
-            <FloatingIcon
-              key={Date.now() + row + col}
-              icon={IconComponent}
-              size={size}
-              duration={duration}
-              delay={delay}
-              initialX={Math.floor(Math.random() * window.innerWidth)}
-          initialY={Math.floor(Math.random() * window.innerHeight)}
-            />
-          ])
+      particles.forEach((particle) => {
+        ctx.beginPath()
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2)
+        ctx.fillStyle = particle.color
+        ctx.fill()
+
+        particle.x += particle.dx
+        particle.y += particle.dy
+
+        if (particle.x + particle.radius > canvas.width || particle.x - particle.radius < 0) {
+          particle.dx = -particle.dx
         }
-      }
+
+        if (particle.y + particle.radius > canvas.height || particle.y - particle.radius < 0) {
+          particle.dy = -particle.dy
+        }
+      })
     }
 
-    // Initial grid pattern
-    createGridPattern()
+    animate()
 
-    // Interval to create new icons
-    const intervalId = setInterval(createIcon, 2000)
-    return () => clearInterval(intervalId)
+    const handleResize = () => {
+      canvas.width = window.innerWidth
+      canvas.height = window.innerHeight
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
   }, [])
 
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      {floatingIcons}
-    </div>
+    <motion.canvas
+      ref={canvasRef}
+      className="absolute inset-0 w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 1 }}
+    />
   )
 }
+
+export default AnimatedBackground

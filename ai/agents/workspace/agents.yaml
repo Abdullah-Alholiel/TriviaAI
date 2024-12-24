@@ -1,0 +1,124 @@
+resources:
+  assistant_agents:
+    trivia_master:
+      name: trivia_master
+      llm:
+        type: openrouter
+        model: "openai/gpt-4"
+        api_key: "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"
+        api_base: "https://openrouter.ai/api/v1"
+        temperature: 0.7
+        max_tokens: 1000
+      system_message: |
+        You are an expert trivia game master specialized in creating engaging
+        and educational questions across various topics. Your role is to:
+        1. Analyze topics and create meaningful categories
+        2. Generate diverse question types
+        3. Ensure accuracy and educational value
+        4. Maintain consistent difficulty levels
+      functions:
+        - name: generate_categories
+          description: Generate relevant categories and subcategories for a topic
+          schema: {
+            "type": "object",
+            "properties": {
+              "topic": {"type": "string"},
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "subcategories": {"type": "array", "items": {"type": "string"}}
+                  }
+                }
+              }
+            }
+          }
+
+    question_generator:
+      name: question_generator
+      llm: 
+        type: ollama
+        model: qwen.2.5-coder:latest  # or llama2, codellama, etc
+        api_base: "http://localhost:11434"
+        temperature: 0.7
+        max_tokens: 1000
+      system_message: |
+        You are a specialized question generator for trivia games.
+        Create engaging questions based on categories and difficulty levels.
+        Ensure questions are factual and include detailed explanations.
+      functions:
+    - name: create_question_set
+      description: Generate formatted trivia questions
+      schema: {
+        "type": "object",
+        "properties": {
+          "questions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {"type": "string", "enum": ["multiple-choice", "true-false", "text-input"]},
+                "question": {"type": "string"},
+                "correctAnswer": {"type": ["string", "boolean"]},
+                "explanation": {"type": "string"},
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {"type": "string"},
+                      "text": {"type": "string"}
+                    }
+                  }
+                },
+                "acceptableAnswers": {
+                  "type": "array",
+                  "items": {"type": "string"}
+                }
+              }
+            }
+          }
+        }
+      }
+
+    fact_checker:
+      name: fact_checker
+      llm: 
+        type: ollama
+        model: qwen2.5-coder:latest  # or llama2, codellama, etc
+        api_base: "http://localhost:11434"
+        temperature: 0.7
+        max_tokens: 1000
+      system_message: |
+        You are a fact-checking specialist ensuring accuracy of trivia questions.
+        Verify facts, sources, and correct answers.
+      functions:
+        - name: verify_question
+          description: Verify the accuracy of a trivia question
+          schema: {
+            "type": "object",
+            "properties": {
+              "question": {"$ref": "#/definitions/TriviaQuestion"},
+              "is_valid": {"type": "boolean"},
+              "corrections": {"type": "object"},
+              "confidence_score": {"type": "number"}
+            }
+          }
+
+workflows:
+  trivia_generation:
+    name: trivia_generation
+    agents: [trivia_master, question_generator, fact_checker]
+    tasks:
+      - name: analyze_topic
+        agent: trivia_master
+        function: generate_categories
+      - name: create_questions
+        agent: question_generator
+        function: create_question_set
+      - name: verify_questions
+        agent: fact_checker
+        function: verify_question
