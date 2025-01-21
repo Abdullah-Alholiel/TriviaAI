@@ -17,12 +17,12 @@ console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
 const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "456496876714-40e0olugiae3k0fls93b7p2nkna4h8ou.apps.googleusercontent.com",
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "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",
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
     GithubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID || "Ov23li7xCzvtRiK0yDSa",
-      clientSecret: process.env.GITHUB_CLIENT_SECRET || "d72e9aedcaf18ef2062b06a27d4fc56d20f2aa9b",
+      clientId: process.env.GITHUB_CLIENT_ID as string,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
     }),
     CredentialsProvider({
       name: "Credentials",
@@ -103,9 +103,9 @@ const authOptions: NextAuthOptions = {
         ...session,
         user: {
           ...session.user,
-          id: token.id ,
-          role: token.role ,
-          provider: token.provider,
+          id: token.id as string,
+          role: token.role as string | undefined,
+          provider: token.provider as string | undefined,
         },
       };
     },
@@ -120,9 +120,6 @@ const authOptions: NextAuthOptions = {
     },
     async signOut(message) {
       console.log('User signed out:', message)
-    },
-    async error(message) {
-      console.error('Error:', message)
     }
   }
 };
