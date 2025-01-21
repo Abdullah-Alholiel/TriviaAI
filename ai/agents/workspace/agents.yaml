@@ -3,10 +3,9 @@ resources:
     trivia_master:
       name: trivia_master
       llm:
-        type: openrouter
+        type: "openrouter"
         model: "google/gemini-2.0-flash-exp:free"
-        api_key: os.getenv("OPENROUTER_API_KEY")
-        api_base: "https://openrouter.ai/api/v1"
+        api_key: ${OPENROUTER_API_KEY}
         temperature: 0.7
         max_tokens: 1000
       system_message: |
@@ -17,97 +16,115 @@ resources:
         3. Ensure accuracy and educational value
         4. Maintain consistent difficulty levels
       functions:
-        - name: generate_categories
-          description: Generate relevant categories and subcategories for a topic
-          schema: {
-            "type": "object",
-            "properties": {
-              "topic": {"type": "string"},
-              "categories": {
-                "type": "array",
-                "items": {
-                  "type": "object",
-                  "properties": {
-                    "name": {"type": "string"},
-                    "description": {"type": "string"},
-                    "subcategories": {"type": "array", "items": {"type": "string"}}
-                  }
-                }
-              }
-            }
-          }
+        generate_categories:
+          description: "Generate relevant categories and subcategories for a topic"
+          schema:
+            type: "object"
+            properties:
+              topic:
+                type: "string"
+              categories:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    name:
+                      type: "string"
+                    description:
+                      type: "string"
+                    subcategories:
+                      type: "array"
+                      items:
+                        type: "string"
 
     question_generator:
       name: question_generator
       llm: 
-        type: openrouter
+        type: "openrouter"
         model: "google/gemini-2.0-flash-exp:free"
-        api_key: os.getenv("OPENROUTER_API_KEY")
-        api_base: "https://openrouter.ai/api/v1"
+        api_key: ${OPENROUTER_API_KEY}
         temperature: 0.7
         max_tokens: 1000
       system_message: |
         You are a specialized question generator for trivia games.
         Create engaging questions based on categories and difficulty levels.
         Ensure questions are factual and include detailed explanations.
+        
+        Format each question exactly like this:
+        
+        **Question:** [Question text]
+        **Type:** [multiple-choice/true-false/text-input]
+        **Options:** (for multiple-choice only)
+        - Option 1
+        - Option 2
+        - Option 3
+        - Option 4
+        **Answer:** [Correct answer - must match one of the options for multiple-choice]
+        **Explanation:** [Detailed explanation]
+        **Acceptable Answers:** [For text-input only, comma-separated alternative answers]
+
+        For true-false questions, use only "true" or "false" as the answer.
+        For multiple-choice, provide exactly 4 options.
+        For text-input, provide multiple acceptable answers when possible.
       functions:
-    - name: create_question_set
-      description: Generate formatted trivia questions
-      schema: {
-        "type": "object",
-        "properties": {
-          "questions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "type": {"type": "string", "enum": ["multiple-choice", "true-false", "text-input"]},
-                "question": {"type": "string"},
-                "correctAnswer": {"type": ["string", "boolean"]},
-                "explanation": {"type": "string"},
-                "options": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {"type": "string"},
-                      "text": {"type": "string"}
-                    }
-                  }
-                },
-                "acceptableAnswers": {
-                  "type": "array",
-                  "items": {"type": "string"}
-                }
-              }
-            }
-          }
-        }
-      }
+        create_question_set:
+          description: "Generate formatted trivia questions"
+          schema:
+            type: "object"
+            properties:
+              questions:
+                type: "array"
+                items:
+                  type: "object"
+                  properties:
+                    type:
+                      type: "string"
+                      enum: ["multiple-choice", "true-false", "text-input"]
+                    question:
+                      type: "string"
+                    correctAnswer:
+                      type: ["string", "boolean"]
+                    explanation:
+                      type: "string"
+                    options:
+                      type: "array"
+                      items:
+                        type: "object"
+                        properties:
+                          id:
+                            type: "string"
+                          text:
+                            type: "string"
+                    acceptableAnswers:
+                      type: "array"
+                      items:
+                        type: "string"
 
     fact_checker:
       name: fact_checker
-      type: openrouter
+      llm:
+        type: "openrouter"
         model: "google/gemini-2.0-flash-exp:free"
-        api_key: os.getenv("OPENROUTER_API_KEY")
-        api_base: "https://openrouter.ai/api/v1"
+        api_key: ${OPENROUTER_API_KEY}
         temperature: 0.7
         max_tokens: 1000
       system_message: |
         You are a fact-checking specialist ensuring accuracy of trivia questions.
         Verify facts, sources, and correct answers.
       functions:
-        - name: verify_question
-          description: Verify the accuracy of a trivia question
-          schema: {
-            "type": "object",
-            "properties": {
-              "question": {"$ref": "#/definitions/TriviaQuestion"},
-              "is_valid": {"type": "boolean"},
-              "corrections": {"type": "object"},
-              "confidence_score": {"type": "number"}
-            }
-          }
+        verify_question:
+          description: "Verify the accuracy of a trivia question"
+          schema:
+            type: "object"
+            properties:
+              question:
+                $ref: "#/definitions/TriviaQuestion"
+              is_valid:
+                type: "boolean"
+              corrections:
+                type: "object"
+              confidence_score:
+                type: "number"
 
 workflows:
   trivia_generation:

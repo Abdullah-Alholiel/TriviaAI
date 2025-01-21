@@ -1,5 +1,7 @@
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union, Optional, Literal
 from pydantic import BaseModel
+
+QuestionType = Literal['multiple-choice', 'true-false', 'text-input']
 
 class QuestionOption(BaseModel):
     id: str
@@ -12,7 +14,7 @@ class Category(BaseModel):
 
 class TriviaQuestion(BaseModel):
     id: str
-    type: str
+    type: QuestionType
     question: str
     correctAnswer: Union[str, bool]
     explanation: str

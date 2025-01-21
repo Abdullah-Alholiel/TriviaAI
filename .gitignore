@@ -24,12 +24,13 @@
 /.next/workbox-*.js.map
 /.next/workbox-*.js
 /.next/workbox-*.js.map
-
+data
 # ai backend venv and env
 /ai/.env
 /ai/env
 /ai/.venv
 /ai/.env.local
+.env
 # production
 /build
 

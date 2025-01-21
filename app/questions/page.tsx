@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'next/navigation'
 import LadderSnake from '../../components/ladder-snake'
@@ -13,7 +13,7 @@ type Question = {
   correctAnswer: string
 }
 
-export default function QuestionsPage() {
+function QuestionsContent() {
   const [questions, setQuestions] = useState<Question[]>([])
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null)
@@ -193,6 +193,18 @@ export default function QuestionsPage() {
         Score: {score} / {currentQuestionIndex + 1}
       </motion.div>
     </div>
+  )
+}
+
+export default function QuestionsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center text-white text-2xl">Loading...</div>
+      </div>
+    }>
+      <QuestionsContent />
+    </Suspense>
   )
 }
 

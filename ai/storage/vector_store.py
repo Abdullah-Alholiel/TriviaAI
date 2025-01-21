@@ -21,6 +21,15 @@ class TriviaVectorStore:
             }]
         )
 
+    async def store_document_embedding(self, doc_id: int, text: str, embedding: list):
+        """
+        Store embedding with reference to a PostgreSQL doc record.
+        """
+        return await self.db.add_texts(
+            texts=[text],
+            metadata=[{"doc_id": doc_id, "embedding": embedding}]
+        )
+
     async def search_questions(
         self,
         category: str,
@@ -39,6 +48,18 @@ class TriviaVectorStore:
             }
             for result in results
         ]
+
+    async def get_embedding_by_doc_id(self, doc_id: int):
+        """
+        Retrieve stored embedding for a given PostgreSQL doc record.
+        """
+        results = await self.db.search(
+            query=f"doc_id:{doc_id}",
+            limit=1
+        )
+        if results:
+            return results[0].metadata.get("embedding")
+        return None
 
     async def get_random_questions(
         self,

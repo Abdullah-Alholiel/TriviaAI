@@ -1,113 +1,127 @@
-from phi.assistant import Assistant
-from phi.llm.openai import OpenAIChat
-from phi.vectordb.pgvector import PGVector
-from typing import List
-import os
-from dotenv import load_dotenv
-from ..models.schemas import Category, TriviaQuestion, TriviaGame
-import yaml
+from typing import List, Dict, Any
+import json
+import random
+from .base_agent import BaseAgent
+from ..services.question_generator import QuestionGenerator
+from ..models.schemas import TriviaGame, Category, TriviaQuestion
+from .rag_agent import RAGAgent
 
-load_dotenv()
-
-class TriviaAgent:
+class TriviaAgent(BaseAgent):
     def __init__(self):
-        # Load agents configuration
-        with open(os.path.join(os.path.dirname(__file__), 'workspace', 'agents.yaml'), 'r') as f:
-            self.config = yaml.safe_load(f)
-        
-        # Initialize vector store
-        self.vector_db = PGVector(
-            collection_name="trivia_knowledge",
-            embedding_model="text-embedding-ada-002"
+        super().__init__()
+        self.question_generator = QuestionGenerator(
+            self._create_assistant(self.config['resources']['assistant_agents']['question_generator'])
         )
-        
-    async def generate_trivia_game(self, topic: str, difficulty: str = "medium", num_questions: int = 10) -> TriviaGame:
-        # Initialize assistants with OpenAI configuration
-        trivia_master = Assistant(
-            name="trivia_master",
-            llm=OpenAIChat(
-                model="gpt-4",
-                api_key=os.getenv('OPENAI_API_KEY'),
-                temperature=0.7
-            ),
-            system_message=self.config['resources']['assistant_agents']['trivia_master']['system_message'],
-            vector_store=self.vector_db
+        self.trivia_master = self._create_assistant(
+            self.config['resources']['assistant_agents']['trivia_master']
         )
-        
-        # Generate categories
-        categories_response = await trivia_master.run(
-            f"""Generate {num_questions // 5} categories and subcategories for the topic: {topic}.
-            Format the response as a JSON object with the following structure:
-            {{
-                "categories": [
-                    {{
-                        "name": "category name",
-                        "description": "category description",
-                        "subcategories": ["subcategory1", "subcategory2"]
-                    }}
-                ]
-            }}"""
-        )
-        
-        categories: List[Category] = [
-            Category(**cat) for cat in categories_response["categories"]
-        ]
-        
-        # Initialize question generator
-        question_generator = Assistant(
-            name="question_generator",
-            llm=OpenAIChat(
-                model="gpt-4",
-                api_key=os.getenv('OPENAI_API_KEY'),
-                temperature=0.7
-            ),
-            system_message=self.config['resources']['assistant_agents']['question_generator']['system_message'],
-            vector_store=self.vector_db
-        )
-        
-        # Generate questions using structured output
-        questions: List[TriviaQuestion] = []
-        questions_per_category = num_questions // len(categories)
-        
-        for category in categories:
-            for subcategory in category.subcategories:
-                response = await question_generator.run(
-                    f"""Create {questions_per_category // len(category.subcategories)} {difficulty} difficulty questions about {category.name} focusing on {subcategory}.
-                    Format the response as a JSON object with the following structure:
-                    {{
-                        "questions": [
-                            {{
-                                "type": "multiple-choice" or "true-false" or "text-input",
-                                "question": "question text",
-                                "correctAnswer": "correct answer",
-                                "explanation": "explanation text",
-                                "options": [
-                                    {{"id": "A", "text": "option text"}},
-                                    {{"id": "B", "text": "option text"}}
-                                ],
-                                "acceptableAnswers": ["answer1", "answer2"]
-                            }}
-                        ]
-                    }}"""
-                )
-                
-                for q in response["questions"]:
-                    question = TriviaQuestion(
-                        id=str(len(questions) + 1),
-                        type=q["type"],
-                        question=q["question"],
-                        correctAnswer=q["correctAnswer"],
-                        explanation=q["explanation"],
-                        options=q.get("options"),
-                        acceptableAnswers=q.get("acceptableAnswers", [])
+        self.rag_agent = RAGAgent(self.vector_store, self.question_generator)
+
+    async def _analyze_topic_categories(self, topic: str) -> List[Category]:
+        """Analyze topic and generate relevant categories"""
+        try:
+            prompt = f"""
+            Analyze the topic '{topic}' and generate 3-5 relevant categories.
+            Each category should include:
+            - name: category name
+            - description: brief description
+            - subcategories: list of 2-3 related subtopics
+            
+            Format as JSON array of Category objects.
+            """
+            
+            response = await self.trivia_master.chat([
+                {"role": "system", "content": self.trivia_master.system_message},
+                {"role": "user", "content": prompt}
+            ])
+            
+            try:
+                categories_data = json.loads(response)
+                return [
+                    Category(
+                        name=cat['name'],
+                        description=cat['description'],
+                        subcategories=cat['subcategories']
                     )
-                    questions.append(question)
-        
-        # Create and return trivia game
-        return TriviaGame(
-            topic=topic,
-            categories=categories,
-            questions=questions,
-            total_questions=len(questions),
-            difficulty_distribution={difficulty: len(questions)}
-        )
+                    for cat in categories_data
+                ]
+            except (json.JSONDecodeError, KeyError) as e:
+                print(f"Error parsing categories: {str(e)}")
+                # Fallback category if parsing fails
+                return [
+                    Category(
+                        name="General Knowledge",
+                        description=f"General knowledge about {topic}",
+                        subcategories=["Basic Facts", "Key Concepts"]
+                    )
+                ]
+                
+        except Exception as e:
+            print(f"Error in _analyze_topic_categories: {str(e)}")
+            # Return default category instead of raising error
+            return [
+                Category(
+                    name="General Knowledge",
+                    description=f"General knowledge about {topic}",
+                    subcategories=["Basic Facts", "Key Concepts"]
+                )
+            ]
+
+    async def generate_trivia_game(
+        self,
+        topic: str,
+        difficulty: str = "medium",
+        num_questions: int = 10
+    ) -> TriviaGame:
+        """Generate a complete trivia game"""
+        try:
+            # Get categories
+            categories = await self._analyze_topic_categories(topic)
+            
+            # Generate questions
+            questions = []
+            attempts = 0
+            max_attempts = num_questions * 2  # Allow some retry buffer
+            
+            while len(questions) < num_questions and attempts < max_attempts:
+                try:
+                    category = random.choice(categories)
+                    question = await self.question_generator.generate_question(
+                        topic=topic,
+                        category=category.name,
+                        difficulty=difficulty
+                    )
+                    if question:
+                        questions.append(question)
+                except Exception as e:
+                    print(f"Error generating question: {str(e)}")
+                
+                attempts += 1
+
+            if not questions:
+                raise ValueError("Failed to generate any valid questions")
+
+            # Create game object
+            return TriviaGame(
+                topic=topic,
+                categories=categories,
+                questions=questions,
+                total_questions=len(questions),
+                difficulty_distribution={difficulty: len(questions)}
+            )
+
+        except Exception as e:
+            print(f"Error generating trivia game: {str(e)}")
+            raise
+
+    async def generate_doc_based_trivia(self, doc_id: int, difficulty: str):
+        """
+        Use RAG approach: retrieve doc embedding from LanceDB, generate questions
+        """
+        embedding = await self.vector_store.get_embedding_by_doc_id(doc_id)
+        if not embedding:
+            raise ValueError("No embedding found for given document ID.")
+
+        questions = await self.rag_agent.generate_questions_from_doc(doc_id)
+        # ...use difficulty logic, format final output...
+        return questions

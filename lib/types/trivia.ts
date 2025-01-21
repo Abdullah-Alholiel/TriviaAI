@@ -11,7 +11,7 @@ export interface TriviaQuestion {
   question: string;
   correctAnswer: string | boolean;
   explanation: string;
-  options?: QuestionOption[];
+  options?: QuestionOption[];  // Now properly populated for multiple-choice
   acceptableAnswers?: string[];
 }
 

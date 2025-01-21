@@ -12,15 +12,20 @@ import SnakesAndLadders from '../components/SnakesAndLadders'
 import { useLoading } from '@/components/ui/LoadingContext'
 import { useTheme } from '@/components/ui/ThemeContext'
 import Switch from '@/components/ui/LightandDark'
+import { useSession, signIn, signOut } from 'next-auth/react'
 import { ThemeProvider } from '@/components/ui/ThemeContext'
+import { AuthButton } from "@/components/auth/AuthButton"
+import { AuthDialog } from "@/components/auth/AuthDialog"
 
 type GameMode = 'none' | 'classic' | 'ai' | 'snakes'
 
 export default function Home() {
+  const { data: session } = useSession()
   const [topic, setTopic] = useState('')
   const [gameMode, setGameMode] = useState<GameMode>('none')
   const { setIsLoading } = useLoading()
   const { isDarkMode, toggleTheme } = useTheme()
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
 
   // Handle initial page load
   useEffect(() => {
@@ -157,6 +162,11 @@ export default function Home() {
           <label className="cursor-pointer">
             <Switch checked={!isDarkMode} onChange={toggleTheme} />
           </label>
+        </div>
+
+        {/* Auth Button */}
+        <div className="fixed top-4 left-4 z-50">
+          <AuthButton />
         </div>
       </div>
     </ThemeProvider>

@@ -3,6 +3,8 @@ import { Inter, Orbitron, Exo_2 } from 'next/font/google'
 import { LoadingProvider } from '@/components/ui/LoadingContext'
 import { ThemeProvider } from '@/components/ui/ThemeContext'
 import { Metadata, Viewport } from 'next'
+import SessionProvider from '@/components/providers/SessionProvider'
+import { Toaster } from '@/components/ui/toaster'
 
 const inter = Inter({ subsets: ['latin'] })
 const orbitron = Orbitron({ 
@@ -65,11 +67,14 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={`${inter.className} min-h-screen antialiased transition-colors duration-300`}>
+        <SessionProvider>
         <ThemeProvider>
           <LoadingProvider>
             {children}
+            <Toaster />
           </LoadingProvider>
         </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   )
